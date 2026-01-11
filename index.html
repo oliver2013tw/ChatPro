@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kreon Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg1:#0f172a;
+      --bg2:#071135;
+      --card:#0b1220;
+      --accent:#7c3aed;
+      --muted: #9aa4bf;
+      --bubble:#0f172a;
+      --me:#1f2937;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    html,body,#app{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* Layout */
+    .container{
+      max-width:1100px;
+      margin:24px auto;
+      height:calc(100% - 48px);
+      display:grid;
+      grid-template-columns: 1fr 320px;
+      gap:20px;
+      padding:18px;
+    }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:12px;
+      padding:16px;
+      box-shadow: 0 6px 30px rgba(2,6,23,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    /* Chat area */
+    .chat{
+      display:flex;
+      flex-direction:column;
+      height:100%;
+    }
+    .chat-header{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding-bottom:8px;
+      border-bottom:1px solid rgba(255,255,255,0.02);
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .logo{
+      width:44px;height:44px;border-radius:10px;
+      background: linear-gradient(135deg,var(--accent),#22c1c3);
+      display:flex;align-items:center;justify-content:center;font-weight:800;color:white;
+      box-shadow: 0 6px 18px rgba(124,58,237,0.12);
+    }
+    .brand h1{font-size:16px;margin:0}
+    .brand p{margin:0;color:var(--muted);font-size:12px}
+
+    .spacer{flex:1}
+
+    .user-actions{display:flex;gap:8px;align-items:center}
+
+    /* messages */
+    .messages{
+      margin-top:12px;
+      flex:1;
+      overflow:auto;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      scroll-behavior:smooth;
+      background: linear-gradient(180deg, transparent, rgba(255,255,255,0.01));
+      border-radius:8px;
+    }
+
+    .msg{
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+      max-width:80%;
+      transition:transform .12s ease, opacity .12s ease;
+    }
+    .msg.me{margin-left:auto;flex-direction:row-reverse}
+    .avatar{
+      width:40px;height:40px;border-radius:10px;flex-shrink:0;overflow:hidden;background:var(--glass);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    .bubble{
+      padding:10px 14px;border-radius:12px;background:linear-gradient(180deg,var(--bubble),rgba(255,255,255,0.02));
+      color:#e6eef8;
+      box-shadow: 0 8px 24px rgba(2,6,23,0.35);
+      word-break:break-word;
+      white-space:pre-wrap;
+    }
+    .msg.me .bubble{background:linear-gradient(180deg,var(--me),#111827);}
+
+    .meta{font-size:12px;color:var(--muted);margin-top:6px;display:flex;gap:8px;align-items:center}
+    .admin-badge{background:var(--accent);padding:2px 6px;border-radius:6px;font-size:11px;color:white}
+
+    .msg-controls{display:flex;gap:6px;margin-left:8px}
+    .msg-controls button{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:6px;border-radius:6px}
+    .msg-controls button:hover{background:rgba(255,255,255,0.02);color:white}
+
+    /* composer */
+    .composer{
+      display:flex;
+      gap:8px;
+      padding-top:12px;
+      border-top:1px solid rgba(255,255,255,0.02);
+      align-items:center;
+    }
+    .input{
+      flex:1;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      background:rgba(255,255,255,0.02);
+      border-radius:10px;padding:8px 10px;
+    }
+    .input textarea{
+      background:transparent;border:0;outline:0;color:inherit;font-size:14px;resize:none;width:100%;height:44px;
+      line-height:1.3;
+    }
+    .btn{
+      background:var(--accent);
+      color:white;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:600;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.14);
+    }
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);font-weight:600}
+
+    /* right sidebar */
+    .sidebar{
+      display:flex;flex-direction:column;gap:12px;height:100%;
+    }
+    .profile{
+      display:flex;gap:12px;align-items:center;
+    }
+    .profile .info{display:flex;flex-direction:column}
+    .small{font-size:13px;color:var(--muted)}
+
+    .users-list{display:flex;flex-direction:column;gap:8px;overflow:auto;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)}
+    .user-row{display:flex;gap:10px;align-items:center;padding:8px;border-radius:8px}
+    .user-row.online{background:linear-gradient(90deg, rgba(124,58,237,0.06), transparent)}
+    .user-row img{width:36px;height:36px;border-radius:8px;object-fit:cover}
+    .user-row .name{font-weight:600}
+    .footer-note{font-size:12px;color:var(--muted);margin-top:auto;text-align:center;padding-top:6px}
+
+    .typing-indicator{font-size:13px;color:var(--muted);height:18px;margin-top:4px}
+
+    @media (max-width:900px){
+      .container{grid-template-columns:1fr; padding:12px}
+      .sidebar{order:2;height:260px}
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="container">
+      <div class="panel chat">
+        <div class="chat-header">
+          <div class="brand">
+            <div class="logo">KC</div>
+            <div>
+              <h1>Kreon Chat</h1>
+              <p>即時聊天室 — 友善、簡潔、可擴充</p>
+            </div>
+          </div>
+          <div class="spacer"></div>
+          <div class="user-actions" id="auth-area">
+            <button class="btn ghost" id="btn-login-google" title="以 Google 登入">以 Google 登入</button>
+            <button class="btn ghost" id="btn-login-anon" title="匿名登入">匿名</button>
+          </div>
+        </div>
+
+        <div class="messages" id="messages" aria-live="polite"></div>
+        <div class="typing-indicator" id="typing-indicator"></div>
+
+        <div class="composer" id="composer">
+          <div class="input">
+            <textarea id="message-input" placeholder="輸入訊息，按 Enter 送出；Shift+Enter 換行" rows="1" maxlength="2000"></textarea>
+          </div>
+          <button class="btn" id="btn-send">送出</button>
+        </div>
+      </div>
+
+      <div class="panel sidebar">
+        <div class="profile" id="profile">
+          <div class="avatar" id="me-avatar"><img src="" alt=""></div>
+          <div class="info">
+            <div id="me-name">未登入</div>
+            <div class="small" id="me-status">請登入以開始聊天</div>
+            <div class="small" id="me-role"></div>
+          </div>
+          <div class="spacer"></div>
+          <div id="auth-controls" style="display:none">
+            <button class="btn ghost" id="btn-logout">登出</button>
+          </div>
+        </div>
+
+        <h3 style="margin:0;font-size:14px">線上使用者</h3>
+        <div class="users-list" id="users-list"></div>
+
+        <div class="footer-note">
+          由 Kreon 提供 • Realtime Database 規則控制管理員與黑名單權限
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase config (已整合至此檔案) -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
+    // Your web app's Firebase configuration (你提供的)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCT23_Ra9F-3J1GtqXxDjeLTb64dAZlRUw",
+      authDomain: "online-chat-a7f0b.firebaseapp.com",
+      databaseURL: "https://online-chat-a7f0b-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "online-chat-a7f0b",
+      storageBucket: "online-chat-a7f0b.firebasestorage.app",
+      messagingSenderId: "53033255392",
+      appId: "1:53033255392:web:1fcbc817195d540ae06b85",
+      measurementId: "G-045WRWJZHK"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    try { getAnalytics(app); } catch(e){ /* analytics might not be available in some envs */ }
+
+    // Firebase modules
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signInAnonymously,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+    import {
+      getDatabase,
+      ref,
+      push,
+      onChildAdded,
+      onChildRemoved,
+      onChildChanged,
+      query,
+      orderByChild,
+      limitToLast,
+      get,
+      child,
+      set,
+      onValue,
+      onDisconnect,
+      remove,
+      update,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+
+    // App services
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // UI elements
+    const messagesEl = document.getElementById('messages');
+    const usersListEl = document.getElementById('users-list');
+    const meNameEl = document.getElementById('me-name');
+    const meStatusEl = document.getElementById('me-status');
+    const meRoleEl = document.getElementById('me-role');
+    const meAvatarImg = document.querySelector('#me-avatar img');
+    const authArea = document.getElementById('auth-area');
+    const authControls = document.getElementById('auth-controls');
+    const btnLoginGoogle = document.getElementById('btn-login-google');
+    const btnLoginAnon = document.getElementById('btn-login-anon');
+    const btnLogout = document.getElementById('btn-logout');
+    const composer = document.getElementById('composer');
+    const messageInput = document.getElementById('message-input');
+    const btnSend = document.getElementById('btn-send');
+    const typingIndicatorEl = document.getElementById('typing-indicator');
+
+    // State
+    let currentUser = null;
+    let isAdmin = false;
+    let isBlacklisted = false;
+    let lastSentAt = 0;
+    const SEND_COOLDOWN_MS = 800; // simple rate limit
+    const MAX_MESSAGES = 200;
+    const messagesRef = ref(db, 'messages');
+    const lastMessagesQuery = query(messagesRef, orderByChild('timestamp'), limitToLast(MAX_MESSAGES));
+    const usersRef = ref(db, 'users');
+
+    // Helpers
+    function formatTime(ts){
+      if (!ts) return '';
+      const d = new Date(ts);
+      return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    }
+    function q(path){ return ref(db, path); }
+    function safeText(t){ return (t || '').toString(); }
+
+    // Auto-resize textarea
+    function resizeTextarea(){
+      messageInput.style.height = 'auto';
+      messageInput.style.height = (messageInput.scrollHeight) + 'px';
+    }
+    messageInput.addEventListener('input', resizeTextarea);
+
+    // Typing indicator: write presence to /typing/{uid} with lastAt, name
+    let typingTimer = null;
+    function setTyping(active){
+      if (!currentUser) return;
+      const myTypingRef = q(`typing/${currentUser.uid}`);
+      if (active) {
+        set(myTypingRef, { name: currentUser.displayName || '匿名', lastAt: Date.now() });
+        onDisconnect(myTypingRef).remove().catch(()=>{});
+      } else {
+        remove(myTypingRef).catch(()=>{});
+      }
+    }
+    messageInput.addEventListener('input', ()=>{
+      setTyping(true);
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(()=> setTyping(false), 1500);
+    });
+
+    // Listen to typing of others
+    onValue(q('typing'), snap=>{
+      const val = snap.val() || {};
+      const others = [];
+      const now = Date.now();
+      for (const [uid, obj] of Object.entries(val)) {
+        if (!currentUser || uid === currentUser.uid) continue;
+        if (!obj || !obj.lastAt) continue;
+        if (now - obj.lastAt < 2500) others.push(obj.name || '匿名');
+      }
+      if (others.length) typingIndicatorEl.textContent = `${others.join(', ')} 正在輸入…`;
+      else typingIndicatorEl.textContent = '';
+    });
+
+    // Create message node in DOM
+    function createMessageNode(msg, id){
+      const el = document.createElement('div');
+      el.className = 'msg' + (msg.uid === (currentUser && currentUser.uid) ? ' me' : '');
+      el.dataset.id = id || '';
+
+      const av = document.createElement('div');
+      av.className = 'avatar';
+      const img = document.createElement('img');
+      img.src = msg.photoURL || ('https://www.gravatar.com/avatar/?d=mp&s=80');
+      img.alt = msg.name || 'user';
+      av.appendChild(img);
+
+      const bubbleWrap = document.createElement('div');
+      bubbleWrap.style.display = 'flex';
+      bubbleWrap.style.flexDirection = 'column';
+      bubbleWrap.style.alignItems = msg.uid === (currentUser && currentUser.uid) ? 'flex-end' : 'flex-start';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = safeText(msg.text || '');
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = msg.name || '匿名';
+      nameSpan.style.fontWeight = '700';
+      nameSpan.style.marginRight = '8px';
+
+      meta.appendChild(nameSpan);
+
+      if (msg.admin) {
+        const adminBadge = document.createElement('span');
+        adminBadge.className = 'admin-badge';
+        adminBadge.innerText = '管理員';
+        meta.appendChild(adminBadge);
+      }
+
+      const timeSpan = document.createElement('span');
+      timeSpan.textContent = formatTime(msg.timestamp || Date.now());
+      timeSpan.style.color = 'var(--muted)';
+
+      meta.appendChild(timeSpan);
+
+      bubbleWrap.appendChild(bubble);
+      bubbleWrap.appendChild(meta);
+
+      el.appendChild(av);
+      el.appendChild(bubbleWrap);
+
+      // Controls (for admins): delete
+      if (isAdmin) {
+        const controls = document.createElement('div');
+        controls.className = 'msg-controls';
+        const btnDel = document.createElement('button');
+        btnDel.title = '刪除訊息';
+        btnDel.innerText = '刪除';
+        btnDel.addEventListener('click', async (e)=>{
+          e.stopPropagation();
+          const ok = confirm('確認刪除此則訊息？此操作無法還原。');
+          if (!ok) return;
+          try{
+            await remove(q(`messages/${id}`));
+          }catch(err){
+            alert('刪除失敗: ' + (err.message || err));
+          }
+        });
+        controls.appendChild(btnDel);
+        bubbleWrap.appendChild(controls);
+      }
+
+      return el;
+    }
+
+    // Keep DOM map by message id for quick removal
+    const domMessages = new Map();
+
+    // Listen to messages
+    onChildAdded(lastMessagesQuery, async (snap) => {
+      const msg = snap.val();
+      const id = snap.key;
+      if (msg && msg.uid && msg.admin !== true) {
+        try {
+          const adminSnap = await get(child(ref(db), `admins/${msg.uid}`));
+          if (adminSnap.exists() && adminSnap.val() === true) {
+            msg.admin = true;
+          }
+        } catch(e){ console.warn('admin check failed', e); }
+      }
+
+      if (domMessages.has(id)) return;
+
+      const node = createMessageNode(msg, id);
+      messagesEl.appendChild(node);
+      domMessages.set(id, node);
+
+      while (messagesEl.children.length > MAX_MESSAGES) {
+        const first = messagesEl.firstChild;
+        if (first) {
+          const firstId = first.dataset.id;
+          if (firstId) domMessages.delete(firstId);
+          messagesEl.removeChild(first);
+        } else break;
+      }
+
+      const atBottom = (messagesEl.scrollTop + messagesEl.clientHeight + 120) >= messagesEl.scrollHeight;
+      if (atBottom) messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
+
+    onChildRemoved(lastMessagesQuery, (snap)=>{
+      const id = snap.key;
+      const node = domMessages.get(id);
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+      domMessages.delete(id);
+    });
+
+    onChildChanged(lastMessagesQuery, (snap)=>{
+      const id = snap.key;
+      const msg = snap.val();
+      const node = domMessages.get(id);
+      if (!node) return;
+      const newNode = createMessageNode(msg, id);
+      node.replaceWith(newNode);
+      domMessages.set(id, newNode);
+    });
+
+    // Users list
+    onValue(usersRef, (snap) => {
+      usersListEl.innerHTML = '';
+      const users = snap.val() || {};
+      const entries = Object.entries(users).sort((a,b)=>{
+        const A = a[1], B = b[1];
+        if ((A.online?1:0) !== (B.online?1:0)) return (B.online?1:0)-(A.online?1:0);
+        return (B.lastSeen||0)-(A.lastSeen||0);
+      });
+      for (const [uid,u] of entries){
+        const row = document.createElement('div');
+        row.className = 'user-row' + (u.online ? ' online' : '');
+        const img = document.createElement('img');
+        img.src = u.photoURL || 'https://www.gravatar.com/avatar/?d=mp&s=80';
+        const nameWrap = document.createElement('div');
+        const name = document.createElement('div');
+        name.className = 'name'; name.textContent = u.name || '匿名';
+        const meta = document.createElement('div'); meta.className='small';
+        meta.textContent = u.online ? '在線' : `最後：${new Date(u.lastSeen||0).toLocaleString()}`;
+        nameWrap.appendChild(name); nameWrap.appendChild(meta);
+        row.appendChild(img); row.appendChild(nameWrap);
+        usersListEl.appendChild(row);
+      }
+    });
+
+    // Auth flow
+    btnLoginGoogle.addEventListener('click', async ()=>{
+      const provider = new GoogleAuthProvider();
+      try{
+        await signInWithPopup(auth, provider);
+      }catch(e){
+        console.error(e);
+        alert('登入失敗: ' + (e.message || e));
+      }
+    });
+    btnLoginAnon.addEventListener('click', async ()=>{
+      try{
+        await signInAnonymously(auth);
+      }catch(e){
+        console.error(e);
+        alert('匿名登入失敗: ' + (e.message || e));
+      }
+    });
+    btnLogout.addEventListener('click', async ()=>{
+      try{
+        await signOut(auth);
+      }catch(e){ console.warn('logout failed', e); }
+    });
+
+    // React to auth changes
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      isAdmin = false;
+      isBlacklisted = false;
+      if (user) {
+        meNameEl.textContent = user.displayName || (user.isAnonymous ? '匿名使用者' : '使用者');
+        meStatusEl.textContent = '已登入';
+        meAvatarImg.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp&s=80';
+        authArea.style.display = 'none';
+        authControls.style.display = 'block';
+
+        // write presence to /users/{uid}
+        const myUserRef = q(`users/${user.uid}`);
+        set(myUserRef, {
+          name: user.displayName || (user.isAnonymous ? '匿名' : '使用者'),
+          photoURL: user.photoURL || '',
+          online: true,
+          lastSeen: serverTimestamp()
+        }).catch(()=>{});
+        try{
+          onDisconnect(myUserRef).update({ online: false, lastSeen: Date.now() }).catch(()=>{});
+        }catch(e){ /* no-op */ }
+
+        // listen admin and blacklist status
+        onValue(q(`admins/${user.uid}`), snap => {
+          isAdmin = (!!snap.val());
+          meRoleEl.textContent = isAdmin ? '管理員' : '';
+        });
+        onValue(q(`blacklist/${user.uid}`), snap => {
+          isBlacklisted = !!snap.exists();
+          if (isBlacklisted) {
+            meStatusEl.textContent = '您已被列入黑名單，無法發言';
+            btnSend.disabled = true;
+            messageInput.disabled = true;
+          } else {
+            meStatusEl.textContent = '已登入';
+            btnSend.disabled = false;
+            messageInput.disabled = false;
+          }
+        });
+      } else {
+        meNameEl.textContent = '未登入';
+        meStatusEl.textContent = '請登入以開始聊天';
+        meAvatarImg.src = '';
+        authArea.style.display = 'flex';
+        authControls.style.display = 'none';
+        meRoleEl.textContent = '';
+      }
+    });
+
+    // Send message
+    async function sendMessage(){
+      if (!currentUser) { alert('請先登入'); return; }
+      if (isBlacklisted) { alert('您已被列入黑名單，無法發言'); return; }
+      const text = messageInput.value.trim();
+      if (!text) return;
+      const now = Date.now();
+      if (now - lastSentAt < SEND_COOLDOWN_MS) {
+        return;
+      }
+      lastSentAt = now;
+
+      const payload = {
+        uid: currentUser.uid,
+        name: currentUser.displayName || (currentUser.isAnonymous ? '匿名' : '使用者'),
+        photoURL: currentUser.photoURL || '',
+        text: text,
+        timestamp: serverTimestamp(),
+      };
+      if (isAdmin) payload.admin = true;
+
+      try{
+        await push(messagesRef, payload);
+        messageInput.value = '';
+        resizeTextarea();
+        setTyping(false);
+      }catch(err){
+        console.error('send failed', err);
+        alert('發送失敗: ' + (err.message || err));
+      }
+    }
+
+    btnSend.addEventListener('click', sendMessage);
+
+    // Enter to send (Shift+Enter newline)
+    messageInput.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Clean up typing state on page unload
+    window.addEventListener('beforeunload', ()=>{
+      if (currentUser) {
+        remove(q(`typing/${currentUser.uid}`)).catch(()=>{});
+        update(q(`users/${currentUser.uid}`), { online: false, lastSeen: Date.now() }).catch(()=>{});
+      }
+    });
+
+    // Accessibility: focus input if logged in
+    onAuthStateChanged(auth, (u)=>{
+      if (u) messageInput.focus();
+    });
+
+    // Notes:
+    // - 請將 Realtime Database 的 rules 設為你之前準備/部署的規則（包含 .indexOn timestamp、messages 欄位驗證等）。
+    // - 若要新增第一位管理員：在 Console -> Realtime Database -> Data 新增 /admins/{UID}: true
+    // - 若需要把管理操作放到後端，請使用 Admin SDK 或 Cloud Functions 實作安全的管理介面。
+  </script>
+</body>
+</html>
